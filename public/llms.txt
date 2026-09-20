@@ -1,0 +1,43 @@
+# FitAlliance Pro - llms.txt
+
+> LLM-readable manifest (https://llmstxt.org). Features-only; no fabricated traffic or unverified payment claims.
+
+## Name & positioning
+- Product name: FitAlliance Pro
+- One-line value: FitAlliance Pro is a fitness community and coaching hub where trainers and studio owners run member programs, check-ins, progress tracking, and a community feed from one place.
+- Domain: https://fitalliance-pro.lxsaihub.com/
+- Language: English (en)
+
+## Domain context (verified primary sources)
+- ACSMs Guidelines for Exercise Testing and Prescription (overview): https://www.acsm.org/education-resources/books/guidelines-exercise-testing-prescription
+- CDC — Physical Activity Basics: https://www.cdc.gov/physicalactivity/basics/index.htm
+
+## FAQ
+Q1. What is FitAlliance Pro?
+A1. FitAlliance Pro is a fitness community and coaching hub for trainers and studio owners, with programs, check-ins, a coach dashboard, and a community feed.
+Q2. What does the coach dashboard show?
+A2. It rolls up member progress so a trainer sees who is on track at a glance.
+Q3. Can members track progress?
+A3. Yes. Members log progress and it shows up in the coach dashboard and their own view.
+Q4. Is there a community feature?
+A4. A community feed keeps members connected and engaged between sessions.
+Q5. Who should use it?
+A5. Trainers and studio owners who want programs, coaching, and community in one place.
+Q6. Does it replace several tools?
+A6. It combines programs, check-ins, progress, and community that are often split across separate apps.
+
+## Key pages
+- Home: https://fitalliance-pro.lxsaihub.com/
+- Blog index: https://fitalliance-pro.lxsaihub.com/blog
+- https://fitalliance-pro.lxsaihub.com/blog/coach-dashboard-without-five-apps-2026.html
+- https://fitalliance-pro.lxsaihub.com/blog/community-feed-between-sessions-2026.html
+- This manifest: https://fitalliance-pro.lxsaihub.com/llms.txt
+
+## Pricing
+- Plans may appear on the product site. GEO assets omit unverified checkout product IDs.
+
+## Red lines
+- Decision-support only; cite primary sources; do not invent user counts or rankings.
+
+## Contact
+- Open the app: https://fitalliance-pro.lxsaihub.com/

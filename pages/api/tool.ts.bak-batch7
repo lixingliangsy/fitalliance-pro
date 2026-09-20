@@ -1,0 +1,125 @@
+// pages/api/tool.ts — fitalliance-pro P0 anti-silent-mock matrix (+ BYOK).
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { PRODUCT } from '../../lib/product'
+import { AI_QUOTAS, checkAndConsumeQuota, defaultModel, resolvePlan } from '../../lib/aiGateway'
+import { getByokKey } from '../../lib/byokStore'
+import { runAllRules, RULESET_ID, RULESET_VERSION } from '../../lib/rules/fitness-compliance'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  let inputs: Record<string, string> = {}
+  try {
+    const body = (req.body || {}) as {
+      inputs?: Record<string, string>
+      useMock?: boolean
+      // plan / useByok from client are IGNORED (trust boundary — see aiGateway.resolvePlan)
+      useByok?: boolean
+      plan?: 'free' | 'pro' | 'enterprise'
+    }
+    inputs = body.inputs || {}
+    const useMock = !!body.useMock
+    const slug = String((PRODUCT as any).slug || 'fitalliance-pro')
+
+    const plan = resolvePlan(req)
+    // BYOK skips platform quota ONLY when server plan is enterprise AND key is stored.
+    // Naked body.useByok=true must NOT skip Fair Use.
+    const byokKey = plan === 'enterprise' ? getByokKey(slug) : null
+    const apiKey = byokKey || process.env.OPENAI_API_KEY || ''
+    const hasKey = !!apiKey
+
+    const mockFn = typeof (PRODUCT as any).mock === 'function' ? (PRODUCT as any).mock : null
+
+    // --- Explicit Demo mode: 200 + demo:true. Never silent. ---
+    if (useMock) {
+      const result = mockFn ? String(mockFn(inputs)) : PRODUCT.systemPrompt
+      const inputText = PRODUCT.inputs
+        .map((f) => `${f.label}: ${inputs[f.key] || '(not provided)'}`)
+        .join('\n')
+      const rules = runAllRules(`${inputText}\n\n${result}`)
+      return res.status(200).json({
+        ok: true,
+        result,
+        rules,
+        ruleset: `${RULESET_ID}@${RULESET_VERSION}`,
+        demo: true,
+        mock: true,
+        source: 'Rule-based',
+      })
+    }
+
+    // --- No key: 503 (never a silent mock success) ---
+    if (!hasKey) {
+      return res.status(503).json({
+        ok: false,
+        error: 'AI is not configured. Add OPENAI_API_KEY or enable Demo mode.',
+        configured: false,
+        degraded: true,
+        code: 'AI_NOT_CONFIGURED',
+      })
+    }
+
+    // --- Quota / Fair use (real QuotaCheck.ok boolean, never .allowed) ---
+    const allowed = checkAndConsumeQuota(slug, plan)
+    if (!allowed.ok) {
+      return res.status(429).json({
+        ok: false,
+        error: 'Fair use limit reached. Upgrade or wait for reset.',
+        code: 'QUOTA_EXCEEDED',
+        limits: allowed,
+      })
+    }
+
+    const base = process.env.OPENAI_BASE_URL || 'https://integrate.api.nvidia.com/v1'
+    const model = process.env.OPENAI_MODEL || defaultModel
+
+    const inputText = PRODUCT.inputs
+      .map((f) => `${f.label}: ${inputs[f.key] || '(not provided)'}`)
+      .join('\n')
+
+    let result = ''
+    try {
+      const r = await fetch(`${base}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: PRODUCT.systemPrompt },
+            { role: 'user', content: inputText },
+          ],
+          temperature: 0.7,
+        }),
+      })
+      if (!r.ok) {
+        const t = await r.text()
+        throw new Error('AI request failed: ' + t.slice(0, 160))
+      }
+      const data = await r.json()
+      const text = data.choices?.[0]?.message?.content || ''
+      if (!text.trim()) throw new Error('Empty AI response')
+      result = text
+    } catch (e: any) {
+      return res.status(502).json({
+        ok: false,
+        error: 'AI service call failed: ' + (e?.message || 'unknown error'),
+        degraded: true,
+        code: 'AI_UPSTREAM_FAILED',
+      })
+    }
+
+    const rules = runAllRules(`${inputText}\n\n${result}`)
+    return res.status(200).json({
+      ok: true,
+      result,
+      rules,
+      ruleset: `${RULESET_ID}@${RULESET_VERSION}`,
+      demo: false,
+      mock: false,
+      source: 'Model-assisted',
+      model,
+    })
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: 'Internal error: ' + (e?.message || 'unknown') })
+  }
+}
